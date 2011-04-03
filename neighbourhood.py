@@ -46,5 +46,11 @@ for route in scapy.config.conf.route.routes:
         continue
 
     net = to_CIDR_notation(network, netmask)
+
+    if interface != scapy.config.conf.iface:
+        # see http://trac.secdev.org/scapy/ticket/537
+        print "skipping", net, "because scapy currently doesn't support arping on non-primary network interfaces"
+        continue
+
     if net:
         scan_and_print_neighbors(net, interface)
