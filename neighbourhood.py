@@ -10,14 +10,9 @@ import scapy.layers.l2
 import scapy.route
 
 def long2net(arg):
-    net = 0
-    for i in xrange(0, 4):
-        if (arg % 256> 0):
-            net += int(round(math.log(arg % 256, 2)))
-        arg /= 256
-
-    return net
-
+    if (arg <= 0 or arg >= 0xFFFFFFFF):
+        raise ValueError("illegal netmask value", hex(arg))
+    return 32 - int(round(math.log(0xFFFFFFFF - arg, 2)))
 
 def to_CIDR_notation(bytes_network, bytes_netmask):
     network = scapy.utils.ltoa(bytes_network)
