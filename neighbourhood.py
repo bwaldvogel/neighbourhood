@@ -28,9 +28,13 @@ def scan_and_print_neighbors(net, interface):
     print "arping", net, "on", interface
     ans,unans = scapy.layers.l2.arping(net, iface=interface, timeout=1, verbose=True)
     for s,r in ans.res:
-        hostname = socket.gethostbyaddr(r.psrc)
         print r.sprintf("%Ether.src%  %ARP.psrc%"),
-        print " ", hostname[0]
+        try:
+            hostname = socket.gethostbyaddr(r.psrc)
+            print " ", hostname[0]
+        except socket.herror:
+            # failed to resolve
+            pass
 
 for route in scapy.config.conf.route.routes:
 
