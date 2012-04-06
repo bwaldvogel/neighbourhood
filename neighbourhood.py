@@ -4,7 +4,7 @@
 # Layer 2 network neighbourhood discovery tool
 # written by Benedikt Waldvogel (mail at bwaldvogel.de)
 
-import scapy, sys, socket, math
+import scapy, socket, math
 import scapy.utils
 import scapy.layers.l2
 import scapy.route
