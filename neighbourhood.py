@@ -18,7 +18,7 @@ def to_CIDR_notation(bytes_network, bytes_netmask):
     network = scapy.utils.ltoa(bytes_network)
     netmask = long2net(bytes_netmask)
     net = "%s/%s" % (network,netmask)
-    if netmask < 22:
+    if netmask < 16:
         print net, "is too big. skipping"
         return None
 
