@@ -4,6 +4,8 @@
 # Layer 2 network neighbourhood discovery tool
 # written by Benedikt Waldvogel (mail at bwaldvogel.de)
 
+from __future__ import absolute_import, division, print_function
+
 import scapy, socket, math
 import scapy.utils
 import scapy.layers.l2
@@ -17,22 +19,23 @@ def long2net(arg):
 def to_CIDR_notation(bytes_network, bytes_netmask):
     network = scapy.utils.ltoa(bytes_network)
     netmask = long2net(bytes_netmask)
-    net = "%s/%s" % (network,netmask)
+    net = "%s/%s" % (network, netmask)
     if netmask < 16:
-        print net, "is too big. skipping"
+        print(net, "is too big. skipping")
         return None
 
     return net
 
 def scan_and_print_neighbors(net, interface):
-    print "arping", net, "on", interface
-    ans,unans = scapy.layers.l2.arping(net, iface=interface, timeout=1, verbose=True)
-    for s,r in ans.res:
-        print r.sprintf("%Ether.src%  %ARP.psrc%"),
+    print("arping", net, "on", interface)
+    ans, unans = scapy.layers.l2.arping(net, iface=interface, timeout=1, verbose=True)
+    for s, r in ans.res:
+        print(r.sprintf("%Ether.src%  %ARP.psrc%"), end='')
         try:
             hostname = socket.gethostbyaddr(r.psrc)
-            print " ", hostname[0]
+            print(" ", hostname[0])
         except socket.herror:
+            print("")
             # failed to resolve
             pass
 
@@ -43,7 +46,7 @@ for route in scapy.config.conf.route.routes:
     interface = route[3]
 
     # skip loopback network and default gw
-    if network == 0 or interface=='lo' or route[4] == '127.0.0.1' or route[4]=='0.0.0.0':
+    if network == 0 or interface == 'lo' or route[4] == '127.0.0.1' or route[4] == '0.0.0.0':
         continue
 
     if netmask <= 0 or netmask == 0xFFFFFFFF:
@@ -53,7 +56,7 @@ for route in scapy.config.conf.route.routes:
 
     if interface != scapy.config.conf.iface:
         # see http://trac.secdev.org/scapy/ticket/537
-        print "skipping", net, "because scapy currently doesn't support arping on non-primary network interfaces"
+        print("skipping", net, "because scapy currently doesn't support arping on non-primary network interfaces")
         continue
 
     if net:
