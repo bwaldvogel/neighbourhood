@@ -12,13 +12,15 @@ import scapy.route
 import socket
 import math
 
-logging.basicConfig(format='%(asctime)s %(levelname)-5s %(message)s',datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(levelname)-5s %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
 
 def long2net(arg):
     if (arg <= 0 or arg >= 0xFFFFFFFF):
         raise ValueError("illegal netmask value", hex(arg))
     return 32 - int(round(math.log(0xFFFFFFFF - arg, 2)))
+
 
 def to_CIDR_notation(bytes_network, bytes_netmask):
     network = scapy.utils.ltoa(bytes_network)
@@ -29,6 +31,7 @@ def to_CIDR_notation(bytes_network, bytes_netmask):
         return None
 
     return net
+
 
 def scan_and_print_neighbors(net, interface):
     logger.info("arping %s on %s" % (net, interface))
@@ -42,6 +45,7 @@ def scan_and_print_neighbors(net, interface):
             # failed to resolve
             pass
         logger.info(line)
+
 
 for network, netmask, _, interface, address in scapy.config.conf.route.routes:
 
