@@ -43,14 +43,10 @@ def scan_and_print_neighbors(net, interface):
             pass
         logger.info(line)
 
-for route in scapy.config.conf.route.routes:
-
-    network = route[0]
-    netmask = route[1]
-    interface = route[3]
+for network, netmask, _, interface, address in scapy.config.conf.route.routes:
 
     # skip loopback network and default gw
-    if network == 0 or interface == 'lo' or route[4] == '127.0.0.1' or route[4] == '0.0.0.0':
+    if network == 0 or interface == 'lo' or address == '127.0.0.1' or address == '0.0.0.0':
         continue
 
     if netmask <= 0 or netmask == 0xFFFFFFFF:
