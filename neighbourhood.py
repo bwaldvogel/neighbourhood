@@ -47,21 +47,22 @@ def scan_and_print_neighbors(net, interface):
         logger.info(line)
 
 
-for network, netmask, _, interface, address in scapy.config.conf.route.routes:
+if __name__ == "__main__":
+    for network, netmask, _, interface, address in scapy.config.conf.route.routes:
 
-    # skip loopback network and default gw
-    if network == 0 or interface == 'lo' or address == '127.0.0.1' or address == '0.0.0.0':
-        continue
+        # skip loopback network and default gw
+        if network == 0 or interface == 'lo' or address == '127.0.0.1' or address == '0.0.0.0':
+            continue
 
-    if netmask <= 0 or netmask == 0xFFFFFFFF:
-        continue
+        if netmask <= 0 or netmask == 0xFFFFFFFF:
+            continue
 
-    net = to_CIDR_notation(network, netmask)
+        net = to_CIDR_notation(network, netmask)
 
-    if interface != scapy.config.conf.iface:
-        # see http://trac.secdev.org/scapy/ticket/537
-        logger.warn("skipping %s because scapy currently doesn't support arping on non-primary network interfaces", net)
-        continue
+        if interface != scapy.config.conf.iface:
+            # see http://trac.secdev.org/scapy/ticket/537
+            logger.warn("skipping %s because scapy currently doesn't support arping on non-primary network interfaces", net)
+            continue
 
-    if net:
-        scan_and_print_neighbors(net, interface)
+        if net:
+            scan_and_print_neighbors(net, interface)
