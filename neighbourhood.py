@@ -11,6 +11,7 @@ import scapy.layers.l2
 import scapy.route
 import socket
 import math
+import errno
 
 logging.basicConfig(format='%(asctime)s %(levelname)-5s %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -33,18 +34,24 @@ def to_CIDR_notation(bytes_network, bytes_netmask):
     return net
 
 
-def scan_and_print_neighbors(net, interface):
+def scan_and_print_neighbors(net, interface, timeout=1):
     logger.info("arping %s on %s" % (net, interface))
-    ans, unans = scapy.layers.l2.arping(net, iface=interface, timeout=1, verbose=True)
-    for s, r in ans.res:
-        line = r.sprintf("%Ether.src%  %ARP.psrc%")
-        try:
-            hostname = socket.gethostbyaddr(r.psrc)
-            line += " " + hostname[0]
-        except socket.herror:
-            # failed to resolve
-            pass
-        logger.info(line)
+    try:
+        ans, unans = scapy.layers.l2.arping(net, iface=interface, timeout=timeout, verbose=True)
+        for s, r in ans.res:
+            line = r.sprintf("%Ether.src%  %ARP.psrc%")
+            try:
+                hostname = socket.gethostbyaddr(r.psrc)
+                line += " " + hostname[0]
+            except socket.herror:
+                # failed to resolve
+                pass
+            logger.info(line)
+    except socket.error as e:
+        if e.errno == errno.EPERM:     # Operation not permitted
+            logger.error("%s. Did you run as root?", e.strerror)
+        else:
+            raise
 
 
 if __name__ == "__main__":
