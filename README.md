@@ -23,4 +23,4 @@ sudo ./neighbourhood.py
 [1]: http://www.secdev.org/projects/scapy/
 [2]: http://en.wikipedia.org/wiki/Arping
 [3]: http://stackoverflow.com/questions/207234/list-of-ip-addresses-hostnames-from-local-network-in-python/
-[4]: http://trac.secdev.org/scapy/ticket/537
+[4]: https://bitbucket.org/secdev/scapy/issues/537/srp-doesnt-honor-interface-parameter-iface
