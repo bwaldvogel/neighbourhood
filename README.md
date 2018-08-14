@@ -5,7 +5,7 @@ See also [this question on stackoverflow.com][3]
 
 ## Dependencies ##
 
-* Python 2
+* Python 2.7 or 3.4+
 * [scapy][1] for networking functions like [arping][2]
 
 ## Run ##
