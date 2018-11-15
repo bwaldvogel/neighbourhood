@@ -10,7 +10,9 @@ See also [this question on stackoverflow.com][3]
 
 ## Run ##
 
-sudo ./neighbourhood.py
+```
+$ sudo ./neighbourhood.py
+```
 
 ## TODO ##
 
