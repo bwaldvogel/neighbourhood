@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
         if interface != scapy.config.conf.iface:
             # see http://trac.secdev.org/scapy/ticket/537
-            logger.warn("skipping %s because scapy currently doesn't support arping on non-primary network interfaces", interface)
+            logger.warning("skipping %s because scapy currently doesn't support arping on non-primary network interfaces", interface)
             continue
 
         if net:
