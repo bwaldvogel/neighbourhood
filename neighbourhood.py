@@ -34,7 +34,7 @@ def to_CIDR_notation(bytes_network, bytes_netmask):
     return net
 
 
-def scan_and_print_neighbors(net, interface, timeout=1):
+def scan_and_print_neighbors(net, interface, timeout=5):
     logger.info("arping %s on %s" % (net, interface))
     try:
         ans, unans = scapy.layers.l2.arping(net, iface=interface, timeout=timeout, verbose=True)
