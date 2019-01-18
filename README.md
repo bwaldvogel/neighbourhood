@@ -30,7 +30,7 @@ $ sudo ./neighbourhood.py
 * IPv6 support
 
 
-[1]: http://www.secdev.org/projects/scapy/
+[1]: https://scapy.net/
 [2]: http://en.wikipedia.org/wiki/Arping
 [3]: http://stackoverflow.com/questions/207234/list-of-ip-addresses-hostnames-from-local-network-in-python/
 [4]: https://docs.python-guide.org/dev/virtualenvs/
