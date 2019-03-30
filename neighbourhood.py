@@ -12,6 +12,8 @@ import scapy.route
 import socket
 import math
 import errno
+import getopt
+import sys
 
 logging.basicConfig(format='%(asctime)s %(levelname)-5s %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -54,8 +56,11 @@ def scan_and_print_neighbors(net, interface, timeout=5):
             raise
 
 
-if __name__ == "__main__":
+def main(interface_to_scan=None):
     for network, netmask, _, interface, address, _ in scapy.config.conf.route.routes:
+
+        if interface_to_scan and interface_to_scan != interface:
+            continue
 
         # skip loopback network and default gw
         if network == 0 or interface == 'lo' or address == '127.0.0.1' or address == '0.0.0.0':
@@ -68,3 +73,29 @@ if __name__ == "__main__":
 
         if net:
             scan_and_print_neighbors(net, interface)
+
+
+def usage():
+    print("Usage: %s [-i <interface>]" % sys.argv[0])
+
+
+if __name__ == "__main__":
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'hi:', ['help', 'interface='])
+    except getopt.GetoptError as err:
+        print(str(err))
+        usage()
+        sys.exit(2)
+
+    interface = None
+
+    for o, a in opts:
+        if o in ('-h', '--help'):
+            usage()
+            sys.exit()
+        elif o in ('-i', '--interface'):
+            interface = a
+        else:
+            assert False, 'unhandled option'
+
+    main(interface_to_scan=interface)

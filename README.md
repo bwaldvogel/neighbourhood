@@ -22,7 +22,7 @@ $ pip install -r requirements.txt
 ## Usage ##
 
 ```
-$ sudo ./neighbourhood.py
+$ sudo ./neighbourhood.py [-i <interface>]
 ```
 
 ## TODO ##
