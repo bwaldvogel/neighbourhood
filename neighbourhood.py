@@ -31,7 +31,7 @@ def to_CIDR_notation(bytes_network, bytes_netmask):
     netmask = long2net(bytes_netmask)
     net = "%s/%s" % (network, netmask)
     if netmask < 16:
-        logger.warn("%s is too big. skipping" % net)
+        logger.warning("%s is too big. skipping" % net)
         return None
 
     return net
