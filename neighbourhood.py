@@ -12,6 +12,7 @@ import scapy.route
 import socket
 import math
 import errno
+import os
 import getopt
 import sys
 
@@ -57,6 +58,10 @@ def scan_and_print_neighbors(net, interface, timeout=5):
 
 
 def main(interface_to_scan=None):
+    if os.geteuid() != 0:
+        print('You need to be root to run this script', file=sys.stderr)
+        sys.exit(1)
+
     for network, netmask, _, interface, address, _ in scapy.config.conf.route.routes:
 
         if interface_to_scan and interface_to_scan != interface:
