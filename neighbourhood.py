@@ -74,6 +74,11 @@ def main(interface_to_scan=None):
         if netmask <= 0 or netmask == 0xFFFFFFFF:
             continue
 
+        # skip docker interface
+        if interface != interface_to_scan and interface.startswith('docker') or interface.startswith('br-'):
+            logger.warning("Skipping interface '%s'" % interface)
+            continue
+
         net = to_CIDR_notation(network, netmask)
 
         if net:
