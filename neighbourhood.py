@@ -75,7 +75,10 @@ def main(interface_to_scan=None):
             continue
 
         # skip docker interface
-        if interface != interface_to_scan and interface.startswith('docker') or interface.startswith('br-'):
+        if interface != interface_to_scan \
+                and (interface.startswith('docker')
+                     or interface.startswith('br-')
+                     or interface.startswith('tun')):
             logger.warning("Skipping interface '%s'" % interface)
             continue
 
