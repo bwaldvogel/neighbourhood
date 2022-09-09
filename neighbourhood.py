@@ -61,11 +61,9 @@ def scan_and_print_neighbors(net, interface, timeout=5):
 def main(interface_to_scan=None):
 
     try:
-        is_admin = os.getuid() == 0
-        print(f'Is root: {is_admin}')
+        is_admin = os.getuid() == 0        
     except AttributeError:
-        is_admin = ctypes.windll.shell32.IsUserAnAdmin() == 1
-        print(f'Is administrator: {is_admin}')
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() == 1        
     
     if not is_admin:
         #if os.geteuid() != 0:
