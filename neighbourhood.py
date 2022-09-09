@@ -15,6 +15,7 @@ import errno
 import os
 import getopt
 import sys
+import ctypes
 
 logging.basicConfig(format='%(asctime)s %(levelname)-5s %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -58,8 +59,15 @@ def scan_and_print_neighbors(net, interface, timeout=5):
 
 
 def main(interface_to_scan=None):
-    if os.geteuid() != 0:
-        print('You need to be root to run this script', file=sys.stderr)
+
+    try:
+        is_admin = os.getuid() == 0        
+    except AttributeError:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin() == 1        
+    
+    if not is_admin:
+        #if os.geteuid() != 0:
+        print('You need to be root/administrator to run this script', file=sys.stderr)
         sys.exit(1)
 
     for network, netmask, _, interface, address, _ in scapy.config.conf.route.routes:
