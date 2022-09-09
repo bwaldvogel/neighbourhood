@@ -15,6 +15,7 @@ import errno
 import os
 import getopt
 import sys
+import ctypes
 
 logging.basicConfig(format='%(asctime)s %(levelname)-5s %(message)s', datefmt='%Y-%m-%d %H:%M:%S', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ def scan_and_print_neighbors(net, interface, timeout=5):
 
 
 def main(interface_to_scan=None):
-    
+
     try:
         is_admin = os.getuid() == 0
         print(f'Is root: {is_admin}')
