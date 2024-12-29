@@ -1,28 +1,26 @@
-## Layer 2 network neighbourhood discovery tool ##
+## Layer 2 Network Neighbourhood Discovery Tool ##
 
-Tool to discover hosts in your network using ARP pings.
-See also [this question on stackoverflow.com][3]
+Easily detect hosts on your local network by sending ARP pings.
+For additional information, see [this Stack Overflow question][3].
 
 ## Dependencies ##
 
-* Python 2.7 or 3.4+
+* Python 3.8+
 * [scapy][1] for networking functions like [arping][2]
 
-## Installation ##
+## Installation and Usage ##
 
-Either install a recent [scapy][1] with your package manager,
-or setup a [virtual environment][4]:
-
-```
-$ virtualenv virtualenv
-$ source virtualenv/bin/activate
-$ pip install -r requirements.txt
-```
-
-## Usage ##
+When [scapy][1] is installed as system library, simply run:
 
 ```
 $ sudo ./neighbourhood.py [-i <interface>]
+```
+
+Alternatively, you can use [uv][4]:
+
+```
+$ uv sync
+$ sudo uv run neighbourhood.py [-i <interface>]
 ```
 
 ## TODO ##
@@ -33,4 +31,4 @@ $ sudo ./neighbourhood.py [-i <interface>]
 [1]: https://scapy.net/
 [2]: http://en.wikipedia.org/wiki/Arping
 [3]: http://stackoverflow.com/questions/207234/list-of-ip-addresses-hostnames-from-local-network-in-python/
-[4]: https://docs.python-guide.org/dev/virtualenvs/
+[4]: https://github.com/astral-sh/uv

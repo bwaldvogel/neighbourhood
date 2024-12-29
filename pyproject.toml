@@ -1,0 +1,9 @@
+[project]
+name = "neighbourhood"
+version = "0.1.0"
+description = "Layer 2 network neighbourhood discovery tool that uses scapy "
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "scapy>=2.6",
+]
