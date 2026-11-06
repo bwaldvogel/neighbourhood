@@ -4,6 +4,7 @@
 # Layer 2 network neighbourhood discovery tool
 # written by Benedikt Waldvogel (mail at bwaldvogel.de)
 
+import ctypes
 import errno
 import getopt
 import logging
@@ -64,9 +65,16 @@ def scan_and_print_neighbors(net: str, interface: str, timeout: float = 5) -> No
             raise
 
 
+def is_admin() -> bool:
+    """Check effective root privileges on Unix or administrator privileges on Windows."""
+    if os.name == "nt":
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    return os.geteuid() == 0
+
+
 def main(interface_to_scan: str | None = None) -> None:
-    if os.geteuid() != 0:
-        print("You need to be root to run this script", file=sys.stderr)
+    if not is_admin():
+        print("You need to be root/administrator to run this script", file=sys.stderr)
         sys.exit(1)
 
     route = scapy.config.conf.route
