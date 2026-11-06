@@ -81,6 +81,52 @@ def test_duplicate_network_is_scanned_once_per_interface(
     ]
 
 
+def test_unrelated_link_local_route_is_skipped(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock, caplog: pytest.LogCaptureFixture
+) -> None:
+    set_routes(
+        monkeypatch,
+        [
+            route("169.254.0.0/16", interface="wlan0"),
+            route("192.168.1.0/24", interface="wlan0"),
+        ],
+    )
+    neighbourhood.main()
+    scan.assert_called_once_with("192.168.1.0/24", "wlan0")
+    assert "source address 192.168.1.10 is outside the subnet" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("cidr", "address"),
+    [
+        ("169.254.0.0/16", "169.254.42.7"),
+        ("10.42.0.0/16", "10.42.5.8"),
+        ("192.168.0.0/23", "192.168.1.10"),
+        ("192.168.1.128/25", "192.168.1.200"),
+    ],
+)
+def test_valid_source_addresses_preserve_original_prefix(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock, cidr: str, address: str
+) -> None:
+    set_routes(monkeypatch, [route(cidr, address=address)])
+    neighbourhood.main()
+    scan.assert_called_once_with(cidr, "eth0")
+
+
+def test_mismatched_source_does_not_hide_valid_route_to_same_network(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    set_routes(
+        monkeypatch,
+        [
+            route("192.168.1.128/25", address="192.168.1.10"),
+            route("192.168.1.128/25", address="192.168.1.200"),
+        ],
+    )
+    neighbourhood.main()
+    scan.assert_called_once_with("192.168.1.128/25", "eth0")
+
+
 @pytest.mark.parametrize(
     "entry",
     [
@@ -128,7 +174,10 @@ def test_linux_interfaces_without_arp_are_skipped(
     )
     set_routes(
         monkeypatch,
-        [route("100.118.0.0/16", interface="wt0"), route("192.168.1.0/24")],
+        [
+            route("100.118.0.0/16", interface="wt0", address="100.118.0.1"),
+            route("192.168.1.0/24"),
+        ],
     )
     neighbourhood.main("wt0" if explicit else None)
     if explicit:
