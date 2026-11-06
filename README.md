@@ -23,6 +23,11 @@ $ uv sync
 $ sudo .venv/bin/python neighbourhood.py [-i <interface>]
 ```
 
+Only directly connected IPv4 networks are scanned; routes through gateways are
+skipped. Each network is scanned once per interface. By default, Docker, bridge
+(`br-`), and tunnel (`tun`) interfaces are skipped; select one explicitly with
+`-i` to include it. Unknown interfaces produce an error with exit code 2.
+
 ### Windows ###
 
 Install [Npcap](https://npcap.com/#download) for Scapy's packet capture and
@@ -51,7 +56,9 @@ uv run --locked python neighbourhood.py --help
 GitHub Actions runs these checks on Linux and Windows with Python 3.12, 3.13,
 and 3.14 for pushes and pull requests. pytest covers both permission-check branches
 with simulated identities, verifies rejection before scanning, and calls the real
-permission API of the runner's OS. The smoke test only displays help.
+permission API of the runner's OS. Routing tests use simulated tables to check
+network selection, duplicate targets, and interface validation. The smoke test
+only displays help.
 
 CI does not perform ARP scans or validate Npcap installation. A complete Windows
 scan needs a separate integration test on a machine with Npcap and a known peer

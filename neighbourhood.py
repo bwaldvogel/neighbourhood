@@ -14,6 +14,7 @@ import socket
 import sys
 
 import scapy.config
+import scapy.interfaces
 import scapy.layers.l2
 import scapy.route
 import scapy.utils
@@ -79,8 +80,22 @@ def main(interface_to_scan: str | None = None) -> None:
 
     route = scapy.config.conf.route
     assert route is not None  # Initialized by importing scapy.route.
-    for network, netmask, _, interface, address, _ in route.routes:
+    if interface_to_scan is not None:
+        try:
+            interface_to_scan = scapy.interfaces.resolve_iface(
+                interface_to_scan
+            ).network_name
+        except ValueError:
+            print(f"Unknown interface: {interface_to_scan}", file=sys.stderr)
+            sys.exit(2)
+
+    scanned: set[tuple[str, str]] = set()
+    for network, netmask, gateway, interface, address, _ in route.routes:
         if interface_to_scan and interface_to_scan != interface:
+            continue
+
+        # ARP only discovers peers on directly connected networks.
+        if gateway != "0.0.0.0":
             continue
 
         # skip loopback network and default gw
@@ -106,7 +121,8 @@ def main(interface_to_scan: str | None = None) -> None:
 
         net = to_CIDR_notation(network, netmask)
 
-        if net:
+        if net and (net, interface) not in scanned:
+            scanned.add((net, interface))
             scan_and_print_neighbors(net, interface)
 
 
