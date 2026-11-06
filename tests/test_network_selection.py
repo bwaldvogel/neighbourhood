@@ -30,6 +30,11 @@ def route(
 @pytest.fixture
 def scan(monkeypatch: pytest.MonkeyPatch) -> Mock:
     monkeypatch.setattr(neighbourhood, "is_admin", lambda: True)
+    monkeypatch.setattr(
+        neighbourhood.scapy.config.conf.ifaces,
+        "dev_from_networkname",
+        Mock(return_value=SimpleNamespace(type=1, flags=0)),
+    )
     scanner = Mock()
     monkeypatch.setattr(neighbourhood, "scan_and_print_neighbors", scanner)
     return scanner
@@ -95,6 +100,54 @@ def test_excluded_routes_are_not_scanned(
     set_routes(monkeypatch, [entry])
     neighbourhood.main()
     scan.assert_not_called()
+
+
+@pytest.mark.parametrize(("device_type", "flags"), [(65534, 0x91), (1, 0x80)])
+@pytest.mark.parametrize("explicit", [False, True])
+def test_linux_interfaces_without_arp_are_skipped(
+    monkeypatch: pytest.MonkeyPatch,
+    scan: Mock,
+    device_type: int,
+    flags: int,
+    explicit: bool,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setattr(neighbourhood, "sys", SimpleNamespace(platform="linux"))
+    monkeypatch.setattr(
+        neighbourhood.scapy.config.conf.ifaces,
+        "dev_from_networkname",
+        lambda name: SimpleNamespace(
+            type=device_type if name == "wt0" else 1,
+            flags=flags if name == "wt0" else 0,
+        ),
+    )
+    monkeypatch.setattr(
+        neighbourhood.scapy.interfaces,
+        "resolve_iface",
+        Mock(return_value=SimpleNamespace(network_name="wt0")),
+    )
+    set_routes(
+        monkeypatch,
+        [route("100.118.0.0/16", interface="wt0"), route("192.168.1.0/24")],
+    )
+    neighbourhood.main("wt0" if explicit else None)
+    if explicit:
+        scan.assert_not_called()
+    else:
+        scan.assert_called_once_with("192.168.1.0/24", "eth0")
+    assert "ARP is not supported" in caplog.text
+
+
+def test_linux_interface_flags_are_not_applied_on_windows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(neighbourhood, "sys", SimpleNamespace(platform="win32"))
+    lookup = Mock(side_effect=AssertionError("Linux flags must not be read"))
+    monkeypatch.setattr(
+        neighbourhood.scapy.config.conf.ifaces, "dev_from_networkname", lookup
+    )
+    assert neighbourhood.supports_arp("Ethernet")
+    lookup.assert_not_called()
 
 
 def test_explicit_interface_resolves_name_and_allows_virtual_interface(

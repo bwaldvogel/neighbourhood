@@ -27,6 +27,8 @@ Only directly connected IPv4 networks are scanned; routes through gateways are
 skipped. Each network is scanned once per interface. By default, Docker, bridge
 (`br-`), and tunnel (`tun`) interfaces are skipped; select one explicitly with
 `-i` to include it. Unknown interfaces produce an error with exit code 2.
+On Linux, interfaces without Ethernet framing or with the `NOARP` flag are
+skipped even when explicitly selected, since they cannot perform this ARP scan.
 
 ### Windows ###
 
