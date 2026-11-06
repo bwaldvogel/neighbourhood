@@ -14,6 +14,7 @@ import socket
 import sys
 
 import scapy.config
+import scapy.data
 import scapy.interfaces
 import scapy.layers.l2
 import scapy.route
@@ -73,6 +74,17 @@ def is_admin() -> bool:
     return os.geteuid() == 0
 
 
+def supports_arp(interface: str) -> bool:
+    # Interface type and flag values are OS-specific; these are Linux checks.
+    if sys.platform != "linux":
+        return True
+    device = scapy.interfaces.dev_from_networkname(interface)
+    iff_noarp = 0x80
+    return device.type == scapy.data.ARPHRD_ETHER and not (
+        int(device.flags) & iff_noarp
+    )
+
+
 def main(interface_to_scan: str | None = None) -> None:
     if not is_admin():
         print("You need to be root/administrator to run this script", file=sys.stderr)
@@ -123,6 +135,11 @@ def main(interface_to_scan: str | None = None) -> None:
 
         if net and (net, interface) not in scanned:
             scanned.add((net, interface))
+            if not supports_arp(interface):
+                logger.warning(
+                    "Skipping interface '%s': ARP is not supported", interface
+                )
+                continue
             scan_and_print_neighbors(net, interface)
 
 
