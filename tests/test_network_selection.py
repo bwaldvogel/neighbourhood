@@ -1,0 +1,142 @@
+from ipaddress import IPv4Network
+from types import SimpleNamespace
+from unittest.mock import Mock, call
+
+import pytest
+
+import neighbourhood
+
+type Route = tuple[int, int, str, str, str, int]
+
+
+def route(
+    cidr: str,
+    interface: str = "eth0",
+    address: str = "192.168.1.10",
+    gateway: str = "0.0.0.0",
+    metric: int = 0,
+) -> Route:
+    network = IPv4Network(cidr)
+    return (
+        int(network.network_address),
+        int(network.netmask),
+        gateway,
+        interface,
+        address,
+        metric,
+    )
+
+
+@pytest.fixture
+def scan(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    monkeypatch.setattr(neighbourhood, "is_admin", lambda: True)
+    scanner = Mock()
+    monkeypatch.setattr(neighbourhood, "scan_and_print_neighbors", scanner)
+    return scanner
+
+
+def set_routes(monkeypatch: pytest.MonkeyPatch, routes: list[Route]) -> None:
+    monkeypatch.setattr(
+        neighbourhood.scapy.config.conf, "route", SimpleNamespace(routes=routes)
+    )
+
+
+def test_only_directly_connected_networks(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    set_routes(
+        monkeypatch,
+        [
+            route("0.0.0.0/0", gateway="192.168.1.1"),
+            route("10.0.0.0/24", gateway="192.168.1.1"),
+            route("192.168.1.0/24"),
+        ],
+    )
+    neighbourhood.main()
+    scan.assert_called_once_with("192.168.1.0/24", "eth0")
+
+
+def test_duplicate_network_is_scanned_once_per_interface(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    set_routes(
+        monkeypatch,
+        [
+            route("192.168.1.0/24"),
+            route("192.168.1.0/24", address="192.168.1.11", metric=100),
+            route("192.168.1.0/24", interface="eth1"),
+            route("192.168.2.0/24", address="192.168.2.10"),
+        ],
+    )
+    neighbourhood.main()
+    assert scan.call_args_list == [
+        call("192.168.1.0/24", "eth0"),
+        call("192.168.1.0/24", "eth1"),
+        call("192.168.2.0/24", "eth0"),
+    ]
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        route("0.0.0.0/0"),
+        route("127.0.0.0/8", interface="lo", address="127.0.0.1"),
+        route("192.168.1.0/24", address="0.0.0.0"),
+        route("192.168.1.10/32"),
+        route("10.0.0.0/8", address="10.0.0.1"),
+        route("172.17.0.0/16", interface="docker0"),
+        route("172.18.0.0/16", interface="br-test"),
+        route("10.1.0.0/24", interface="tun0"),
+    ],
+)
+def test_excluded_routes_are_not_scanned(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock, entry: Route
+) -> None:
+    set_routes(monkeypatch, [entry])
+    neighbourhood.main()
+    scan.assert_not_called()
+
+
+def test_explicit_interface_resolves_name_and_allows_virtual_interface(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    resolver = Mock(return_value=SimpleNamespace(network_name="docker0"))
+    monkeypatch.setattr(neighbourhood.scapy.interfaces, "resolve_iface", resolver)
+    set_routes(
+        monkeypatch,
+        [
+            route("192.168.1.0/24"),
+            route("172.17.0.0/16", interface="docker0", address="172.17.0.1"),
+            route("10.0.0.0/24", interface="docker0", gateway="172.17.0.2"),
+        ],
+    )
+    neighbourhood.main("friendly name")
+    resolver.assert_called_once_with("friendly name")
+    scan.assert_called_once_with("172.17.0.0/16", "docker0")
+
+
+def test_unknown_interface_fails_before_scanning(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        neighbourhood.scapy.interfaces, "resolve_iface", Mock(side_effect=ValueError)
+    )
+    set_routes(monkeypatch, [route("192.168.1.0/24")])
+    with pytest.raises(SystemExit) as exc:
+        neighbourhood.main("missing0")
+    assert exc.value.code == 2
+    assert "Unknown interface: missing0" in capsys.readouterr().err
+    scan.assert_not_called()
+
+
+def test_existing_interface_without_ipv4_routes_is_not_unknown(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    monkeypatch.setattr(
+        neighbourhood.scapy.interfaces,
+        "resolve_iface",
+        Mock(return_value=SimpleNamespace(network_name="eth2")),
+    )
+    set_routes(monkeypatch, [route("192.168.1.0/24")])
+    neighbourhood.main("eth2")
+    scan.assert_not_called()
