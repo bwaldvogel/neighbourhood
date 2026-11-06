@@ -58,7 +58,15 @@ def test_only_directly_connected_networks(
         ],
     )
     neighbourhood.main()
-    scan.assert_called_once_with("192.168.1.0/24", "eth0")
+    scan.assert_called_once_with("192.168.1.0/24", "eth0", timeout=5, resolve=True)
+
+
+def test_scan_options_reach_selected_network(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    set_routes(monkeypatch, [route("192.168.1.0/24")])
+    neighbourhood.main(timeout=0.25, resolve=False)
+    scan.assert_called_once_with("192.168.1.0/24", "eth0", timeout=0.25, resolve=False)
 
 
 def test_duplicate_network_is_scanned_once_per_interface(
@@ -75,9 +83,9 @@ def test_duplicate_network_is_scanned_once_per_interface(
     )
     neighbourhood.main()
     assert scan.call_args_list == [
-        call("192.168.1.0/24", "eth0"),
-        call("192.168.1.0/24", "eth1"),
-        call("192.168.2.0/24", "eth0"),
+        call("192.168.1.0/24", "eth0", timeout=5, resolve=True),
+        call("192.168.1.0/24", "eth1", timeout=5, resolve=True),
+        call("192.168.2.0/24", "eth0", timeout=5, resolve=True),
     ]
 
 
@@ -92,7 +100,7 @@ def test_unrelated_link_local_route_is_skipped(
         ],
     )
     neighbourhood.main()
-    scan.assert_called_once_with("192.168.1.0/24", "wlan0")
+    scan.assert_called_once_with("192.168.1.0/24", "wlan0", timeout=5, resolve=True)
     assert "source address 192.168.1.10 is outside the subnet" in caplog.text
 
 
@@ -110,7 +118,7 @@ def test_valid_source_addresses_preserve_original_prefix(
 ) -> None:
     set_routes(monkeypatch, [route(cidr, address=address)])
     neighbourhood.main()
-    scan.assert_called_once_with(cidr, "eth0")
+    scan.assert_called_once_with(cidr, "eth0", timeout=5, resolve=True)
 
 
 def test_mismatched_source_does_not_hide_valid_route_to_same_network(
@@ -124,7 +132,7 @@ def test_mismatched_source_does_not_hide_valid_route_to_same_network(
         ],
     )
     neighbourhood.main()
-    scan.assert_called_once_with("192.168.1.128/25", "eth0")
+    scan.assert_called_once_with("192.168.1.128/25", "eth0", timeout=5, resolve=True)
 
 
 @pytest.mark.parametrize(
@@ -183,7 +191,7 @@ def test_linux_interfaces_without_arp_are_skipped(
     if explicit:
         scan.assert_not_called()
     else:
-        scan.assert_called_once_with("192.168.1.0/24", "eth0")
+        scan.assert_called_once_with("192.168.1.0/24", "eth0", timeout=5, resolve=True)
     assert "ARP is not supported" in caplog.text
 
 
@@ -214,7 +222,7 @@ def test_explicit_interface_resolves_name_and_allows_virtual_interface(
     )
     neighbourhood.main("friendly name")
     resolver.assert_called_once_with("friendly name")
-    scan.assert_called_once_with("172.17.0.0/16", "docker0")
+    scan.assert_called_once_with("172.17.0.0/16", "docker0", timeout=5, resolve=True)
 
 
 def test_unknown_interface_fails_before_scanning(

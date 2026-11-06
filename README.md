@@ -34,6 +34,16 @@ with a warning. For example, a `169.254.0.0/16` route with source address
 `192.168.1.10` is not scanned. Valid link-local networks are still scanned when
 the source address belongs to them; subnet sizes are taken from the routing table.
 
+Use `--timeout SECONDS` to set the ARP response timeout (default: 5 seconds) and
+`--no-resolve` to skip reverse-DNS hostname lookups:
+
+```sh
+sudo .venv/bin/python neighbourhood.py -i eth0 --timeout 2 --no-resolve
+```
+
+The timeout applies to ARP responses, not DNS lookups or the total runtime.
+Run `uv run neighbourhood.py --help` to see all options without root privileges.
+
 ### Windows ###
 
 Install [Npcap](https://npcap.com/#download) for Scapy's packet capture and

@@ -4,9 +4,9 @@
 # Layer 2 network neighbourhood discovery tool
 # written by Benedikt Waldvogel (mail at bwaldvogel.de)
 
+import argparse
 import ctypes
 import errno
-import getopt
 import logging
 import math
 import os
@@ -46,7 +46,9 @@ def to_CIDR_notation(bytes_network: int, bytes_netmask: int) -> str | None:
     return net
 
 
-def scan_and_print_neighbors(net: str, interface: str, timeout: float = 5) -> None:
+def scan_and_print_neighbors(
+    net: str, interface: str, timeout: float = 5, *, resolve: bool = True
+) -> None:
     logger.info("arping %s on %s", net, interface)
     try:
         ans, unans = scapy.layers.l2.arping(
@@ -54,12 +56,13 @@ def scan_and_print_neighbors(net: str, interface: str, timeout: float = 5) -> No
         )
         for _s, r in ans.res:
             line = r.sprintf("%Ether.src%  %ARP.psrc%")
-            try:
-                hostname = socket.gethostbyaddr(r.psrc)
-                line += " " + hostname[0]
-            except socket.herror:
-                # failed to resolve
-                pass
+            if resolve:
+                try:
+                    hostname = socket.gethostbyaddr(r.psrc)
+                    line += " " + hostname[0]
+                except socket.herror:
+                    # failed to resolve
+                    pass
             logger.info(line)
     except OSError as e:
         if e.errno == errno.EPERM:  # Operation not permitted
@@ -86,7 +89,9 @@ def supports_arp(interface: str) -> bool:
     )
 
 
-def main(interface_to_scan: str | None = None) -> None:
+def main(
+    interface_to_scan: str | None = None, *, timeout: float = 5, resolve: bool = True
+) -> None:
     if not is_admin():
         print("You need to be root/administrator to run this script", file=sys.stderr)
         sys.exit(1)
@@ -150,30 +155,40 @@ def main(interface_to_scan: str | None = None) -> None:
                     "Skipping interface '%s': ARP is not supported", interface
                 )
                 continue
-            scan_and_print_neighbors(net, interface)
+            scan_and_print_neighbors(net, interface, timeout=timeout, resolve=resolve)
 
 
-def usage() -> None:
-    print(f"Usage: {sys.argv[0]} [-i <interface>]")
+def positive_timeout(value: str) -> float:
+    try:
+        timeout = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(
+            "timeout must be a positive finite number"
+        ) from exc
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise argparse.ArgumentTypeError("timeout must be a positive finite number")
+    return timeout
+
+
+def cli(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="Discover hosts on directly connected IPv4 networks using ARP.",
+        allow_abbrev=False,
+    )
+    parser.add_argument("-i", "--interface", help="scan only this interface")
+    parser.add_argument(
+        "--timeout",
+        type=positive_timeout,
+        default=5.0,
+        metavar="SECONDS",
+        help="ARP response timeout in seconds (default: %(default)s; excludes DNS lookup time)",
+    )
+    parser.add_argument(
+        "--no-resolve", action="store_true", help="skip reverse-DNS hostname lookups"
+    )
+    args = parser.parse_args(argv)
+    main(args.interface, timeout=args.timeout, resolve=not args.no_resolve)
 
 
 if __name__ == "__main__":
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "hi:", ["help", "interface="])
-    except getopt.GetoptError as err:
-        print(str(err))
-        usage()
-        sys.exit(2)
-
-    interface = None
-
-    for o, a in opts:
-        if o in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif o in ("-i", "--interface"):
-            interface = a
-        else:
-            raise AssertionError("unhandled option")
-
-    main(interface_to_scan=interface)
+    cli()
