@@ -12,6 +12,7 @@ import math
 import os
 import socket
 import sys
+from ipaddress import IPv4Address, IPv4Network
 
 import scapy.config
 import scapy.data
@@ -132,6 +133,15 @@ def main(interface_to_scan: str | None = None) -> None:
             continue
 
         net = to_CIDR_notation(network, netmask)
+
+        if net and IPv4Address(address) not in IPv4Network(net):
+            logger.warning(
+                "Skipping %s on %s: source address %s is outside the subnet",
+                net,
+                interface,
+                address,
+            )
+            continue
 
         if net and (net, interface) not in scanned:
             scanned.add((net, interface))

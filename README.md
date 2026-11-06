@@ -29,6 +29,10 @@ skipped. Each network is scanned once per interface. By default, Docker, bridge
 `-i` to include it. Unknown interfaces produce an error with exit code 2.
 On Linux, interfaces without Ethernet framing or with the `NOARP` flag are
 skipped even when explicitly selected, since they cannot perform this ARP scan.
+Routes whose source IPv4 address is outside the destination subnet are skipped
+with a warning. For example, a `169.254.0.0/16` route with source address
+`192.168.1.10` is not scanned. Valid link-local networks are still scanned when
+the source address belongs to them; subnet sizes are taken from the routing table.
 
 ### Windows ###
 
