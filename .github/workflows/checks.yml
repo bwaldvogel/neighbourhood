@@ -10,12 +10,13 @@ permissions:
 
 jobs:
   check:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest]
         python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,5 +34,7 @@ jobs:
         run: uv run --locked ruff format --check .
       - name: Check types
         run: uv run --locked ty check --error-on-warning
+      - name: Test
+        run: uv run --locked python -m pytest
       - name: CLI smoke test
         run: uv run --locked python neighbourhood.py --help
