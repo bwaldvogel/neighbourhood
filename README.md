@@ -5,7 +5,7 @@ For additional information, see [this Stack Overflow question][3].
 
 ## Dependencies ##
 
-* Python 3.8+
+* Python 3.12+ (development uses Python 3.14)
 * [scapy][1] for networking functions like [arping][2]
 
 ## Installation and Usage ##
@@ -20,8 +20,23 @@ Alternatively, you can use [uv][4]:
 
 ```
 $ uv sync
-$ sudo uv run neighbourhood.py [-i <interface>]
+$ sudo .venv/bin/python neighbourhood.py [-i <interface>]
 ```
+
+## Development ##
+
+Install development dependencies with `uv sync --locked`, then run:
+
+```sh
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked ty check --error-on-warning
+uv run --locked python neighbourhood.py --help
+```
+
+GitHub Actions runs these checks on Python 3.12, 3.13, and 3.14 for pushes
+and pull requests. The smoke test only displays help; it does not scan the network
+or require root privileges.
 
 ## TODO ##
 
