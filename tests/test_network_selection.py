@@ -1,6 +1,6 @@
 from ipaddress import IPv4Network
 from types import SimpleNamespace
-from unittest.mock import Mock, call
+from unittest.mock import Mock
 
 import pytest
 
@@ -27,14 +27,18 @@ def route(
     )
 
 
-@pytest.fixture
-def scan(monkeypatch: pytest.MonkeyPatch) -> Mock:
-    monkeypatch.setattr(neighbourhood, "is_admin", lambda: True)
+@pytest.fixture(autouse=True)
+def arp_interfaces(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         neighbourhood.scapy.config.conf.ifaces,
         "dev_from_networkname",
         Mock(return_value=SimpleNamespace(type=1, flags=0)),
     )
+
+
+@pytest.fixture
+def scan(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    monkeypatch.setattr(neighbourhood, "is_admin", lambda: True)
     scanner = Mock()
     monkeypatch.setattr(neighbourhood, "scan_and_print_neighbors", scanner)
     return scanner
@@ -78,23 +82,17 @@ def test_invalid_netmask_does_not_stop_other_scans(
     scan.assert_called_once_with("192.168.1.0/24", "eth0", timeout=5, resolve=True)
 
 
-def test_duplicate_network_is_scanned_once_per_interface(
-    monkeypatch: pytest.MonkeyPatch, scan: Mock
-) -> None:
-    set_routes(
-        monkeypatch,
-        [
-            route("192.168.1.0/24"),
-            route("192.168.1.0/24", address="192.168.1.11", metric=100),
-            route("192.168.1.0/24", interface="eth1"),
-            route("192.168.2.0/24", address="192.168.2.10"),
-        ],
-    )
-    neighbourhood.main()
-    assert scan.call_args_list == [
-        call("192.168.1.0/24", "eth0", timeout=5, resolve=True),
-        call("192.168.1.0/24", "eth1", timeout=5, resolve=True),
-        call("192.168.2.0/24", "eth0", timeout=5, resolve=True),
+def test_duplicate_network_is_scanned_once_per_interface() -> None:
+    routes = [
+        route("192.168.1.0/24"),
+        route("192.168.1.0/24", address="192.168.1.11", metric=100),
+        route("192.168.1.0/24", interface="eth1"),
+        route("192.168.2.0/24", address="192.168.2.10"),
+    ]
+    assert list(neighbourhood.iter_scan_targets(routes)) == [
+        (IPv4Network("192.168.1.0/24"), "eth0"),
+        (IPv4Network("192.168.1.0/24"), "eth1"),
+        (IPv4Network("192.168.2.0/24"), "eth0"),
     ]
 
 
@@ -123,25 +121,21 @@ def test_unrelated_link_local_route_is_skipped(
     ],
 )
 def test_valid_source_addresses_preserve_original_prefix(
-    monkeypatch: pytest.MonkeyPatch, scan: Mock, cidr: str, address: str
+    cidr: str, address: str
 ) -> None:
-    set_routes(monkeypatch, [route(cidr, address=address)])
-    neighbourhood.main()
-    scan.assert_called_once_with(cidr, "eth0", timeout=5, resolve=True)
+    assert list(neighbourhood.iter_scan_targets([route(cidr, address=address)])) == [
+        (IPv4Network(cidr), "eth0")
+    ]
 
 
-def test_mismatched_source_does_not_hide_valid_route_to_same_network(
-    monkeypatch: pytest.MonkeyPatch, scan: Mock
-) -> None:
-    set_routes(
-        monkeypatch,
-        [
-            route("192.168.1.128/25", address="192.168.1.10"),
-            route("192.168.1.128/25", address="192.168.1.200"),
-        ],
-    )
-    neighbourhood.main()
-    scan.assert_called_once_with("192.168.1.128/25", "eth0", timeout=5, resolve=True)
+def test_mismatched_source_does_not_hide_valid_route_to_same_network() -> None:
+    routes = [
+        route("192.168.1.128/25", address="192.168.1.10"),
+        route("192.168.1.128/25", address="192.168.1.200"),
+    ]
+    assert list(neighbourhood.iter_scan_targets(routes)) == [
+        (IPv4Network("192.168.1.128/25"), "eth0")
+    ]
 
 
 @pytest.mark.parametrize(
@@ -157,12 +151,8 @@ def test_mismatched_source_does_not_hide_valid_route_to_same_network(
         route("10.1.0.0/24", interface="tun0"),
     ],
 )
-def test_excluded_routes_are_not_scanned(
-    monkeypatch: pytest.MonkeyPatch, scan: Mock, entry: Route
-) -> None:
-    set_routes(monkeypatch, [entry])
-    neighbourhood.main()
-    scan.assert_not_called()
+def test_excluded_routes_are_not_scanned(entry: Route) -> None:
+    assert list(neighbourhood.iter_scan_targets([entry])) == []
 
 
 @pytest.mark.parametrize(("device_type", "flags"), [(65534, 0x91), (1, 0x80)])
