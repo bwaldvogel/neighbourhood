@@ -69,6 +69,15 @@ def test_scan_options_reach_selected_network(
     scan.assert_called_once_with("192.168.1.0/24", "eth0", timeout=0.25, resolve=False)
 
 
+def test_invalid_netmask_does_not_stop_other_scans(
+    monkeypatch: pytest.MonkeyPatch, scan: Mock
+) -> None:
+    invalid_route = (0xC0A80000, 0xFF00FF00, "0.0.0.0", "eth0", "192.168.1.10", 0)
+    set_routes(monkeypatch, [invalid_route, route("192.168.1.0/24")])
+    neighbourhood.main()
+    scan.assert_called_once_with("192.168.1.0/24", "eth0", timeout=5, resolve=True)
+
+
 def test_duplicate_network_is_scanned_once_per_interface(
     monkeypatch: pytest.MonkeyPatch, scan: Mock
 ) -> None:

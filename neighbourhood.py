@@ -19,7 +19,6 @@ import scapy.data
 import scapy.interfaces
 import scapy.layers.l2
 import scapy.route
-import scapy.utils
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-5s %(message)s",
@@ -29,21 +28,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def long2net(arg: int) -> int:
-    if arg <= 0 or arg >= 0xFFFFFFFF:
-        raise ValueError("illegal netmask value", hex(arg))
-    return 32 - int(round(math.log(0xFFFFFFFF - arg, 2)))
-
-
 def to_CIDR_notation(bytes_network: int, bytes_netmask: int) -> str | None:
-    network = scapy.utils.ltoa(bytes_network)
-    netmask = long2net(bytes_netmask)
-    net = f"{network}/{netmask}"
-    if netmask < 16:
-        logger.warning("%s is too big. skipping", net)
+    try:
+        network = IPv4Network((bytes_network, str(IPv4Address(bytes_netmask))))
+        # ipaddress also accepts host masks; routing entries must use netmasks.
+        if int(network.netmask) != bytes_netmask:
+            raise ValueError("expected a netmask, not a host mask")
+    except ValueError as exc:
+        logger.warning(
+            "Skipping invalid IPv4 route (network=%s, netmask=%s): %s",
+            bytes_network,
+            bytes_netmask,
+            exc,
+        )
+        return None
+    if network.prefixlen < 16:
+        logger.warning("%s is too big. skipping", network)
         return None
 
-    return net
+    return str(network)
 
 
 def scan_and_print_neighbors(
