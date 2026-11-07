@@ -1,5 +1,9 @@
 ## Layer 2 Network Neighbourhood Discovery Tool ##
 
+[![Checks](https://github.com/bwaldvogel/neighbourhood/actions/workflows/checks.yml/badge.svg)](https://github.com/bwaldvogel/neighbourhood/actions/workflows/checks.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](#dependencies)
+[![License: GPL v2](https://img.shields.io/badge/license-GPL_v2-blue)](LICENSE)
+
 Easily detect hosts on your local network by sending ARP pings.
 For additional information, see [this Stack Overflow question][3].
 
