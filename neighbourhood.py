@@ -12,6 +12,7 @@ import math
 import os
 import socket
 import sys
+from collections.abc import Iterable, Iterator
 from ipaddress import IPv4Address, IPv4Network
 
 import scapy.config
@@ -28,7 +29,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def to_CIDR_notation(bytes_network: int, bytes_netmask: int) -> str | None:
+MIN_SCAN_PREFIX = 16
+type Route = tuple[int, int, str, str, str, int]
+
+
+def parse_scan_network(bytes_network: int, bytes_netmask: int) -> IPv4Network | None:
     try:
         network = IPv4Network((bytes_network, str(IPv4Address(bytes_netmask))))
         # ipaddress also accepts host masks; routing entries must use netmasks.
@@ -42,11 +47,11 @@ def to_CIDR_notation(bytes_network: int, bytes_netmask: int) -> str | None:
             exc,
         )
         return None
-    if network.prefixlen < 16:
+    if network.prefixlen < MIN_SCAN_PREFIX:
         logger.warning("%s is too big. skipping", network)
         return None
 
-    return str(network)
+    return network
 
 
 def scan_and_print_neighbors(
@@ -110,8 +115,16 @@ def main(
             print(f"Unknown interface: {interface_to_scan}", file=sys.stderr)
             sys.exit(2)
 
-    scanned: set[tuple[str, str]] = set()
-    for network, netmask, gateway, interface, address, _ in route.routes:
+    for net, interface in iter_scan_targets(route.routes, interface_to_scan):
+        scan_and_print_neighbors(str(net), interface, timeout=timeout, resolve=resolve)
+
+
+def iter_scan_targets(
+    routes: Iterable[Route], interface_to_scan: str | None = None
+) -> Iterator[tuple[IPv4Network, str]]:
+    """Select distinct directly connected networks suitable for ARP discovery."""
+    scanned: set[tuple[IPv4Network, str]] = set()
+    for network, netmask, gateway, interface, address, _ in routes:
         if interface_to_scan and interface_to_scan != interface:
             continue
 
@@ -132,17 +145,17 @@ def main(
             continue
 
         # skip docker interface
-        if interface != interface_to_scan and (
-            interface.startswith("docker")
-            or interface.startswith("br-")
-            or interface.startswith("tun")
+        if interface != interface_to_scan and interface.startswith(
+            ("docker", "br-", "tun")
         ):
             logger.warning("Skipping interface '%s'", interface)
             continue
 
-        net = to_CIDR_notation(network, netmask)
+        net = parse_scan_network(network, netmask)
+        if net is None:
+            continue
 
-        if net and IPv4Address(address) not in IPv4Network(net):
+        if IPv4Address(address) not in net:
             logger.warning(
                 "Skipping %s on %s: source address %s is outside the subnet",
                 net,
@@ -151,14 +164,14 @@ def main(
             )
             continue
 
-        if net and (net, interface) not in scanned:
+        if (net, interface) not in scanned:
             scanned.add((net, interface))
             if not supports_arp(interface):
                 logger.warning(
                     "Skipping interface '%s': ARP is not supported", interface
                 )
                 continue
-            scan_and_print_neighbors(net, interface, timeout=timeout, resolve=resolve)
+            yield net, interface
 
 
 def positive_timeout(value: str) -> float:
