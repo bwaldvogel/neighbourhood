@@ -48,6 +48,9 @@ sudo .venv/bin/python neighbourhood.py -i eth0 --timeout 2 --no-resolve
 The timeout applies to ARP responses, not DNS lookups or the total runtime.
 Run `uv run neighbourhood.py --help` to see all options without root privileges.
 
+Failed scans are reported while remaining targets are still attempted; the program
+exits with status 1 if any scan fails.
+
 ### Windows ###
 
 Install [Npcap](https://npcap.com/#download) for Scapy's packet capture and

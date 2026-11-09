@@ -6,7 +6,6 @@
 
 import argparse
 import ctypes
-import errno
 import logging
 import math
 import os
@@ -17,6 +16,7 @@ from ipaddress import IPv4Address, IPv4Network
 
 import scapy.config
 import scapy.data
+import scapy.error
 import scapy.interfaces
 import scapy.layers.l2
 import scapy.route
@@ -58,25 +58,19 @@ def scan_and_print_neighbors(
     net: str, interface: str, timeout: float = 5, *, resolve: bool = True
 ) -> None:
     logger.info("arping %s on %s", net, interface)
-    try:
-        ans, unans = scapy.layers.l2.arping(
-            net, iface=interface, timeout=timeout, verbose=True
-        )
-        for _s, r in ans.res:
-            line = r.sprintf("%Ether.src%  %ARP.psrc%")
-            if resolve:
-                try:
-                    hostname = socket.gethostbyaddr(r.psrc)
-                    line += " " + hostname[0]
-                except socket.herror:
-                    # failed to resolve
-                    pass
-            logger.info(line)
-    except OSError as e:
-        if e.errno == errno.EPERM:  # Operation not permitted
-            logger.error("%s. Did you run as root?", e.strerror)
-        else:
-            raise
+    ans, unans = scapy.layers.l2.arping(
+        net, iface=interface, timeout=timeout, verbose=True
+    )
+    for _s, r in ans.res:
+        line = r.sprintf("%Ether.src%  %ARP.psrc%")
+        if resolve:
+            try:
+                hostname = socket.gethostbyaddr(r.psrc)
+                line += " " + hostname[0]
+            except socket.herror:
+                # failed to resolve
+                pass
+        logger.info(line)
 
 
 def is_admin() -> bool:
@@ -115,8 +109,17 @@ def main(
             print(f"Unknown interface: {interface_to_scan}", file=sys.stderr)
             sys.exit(2)
 
+    failed = False
     for net, interface in iter_scan_targets(route.routes, interface_to_scan):
-        scan_and_print_neighbors(str(net), interface, timeout=timeout, resolve=resolve)
+        try:
+            scan_and_print_neighbors(
+                str(net), interface, timeout=timeout, resolve=resolve
+            )
+        except (OSError, scapy.error.Scapy_Exception) as exc:
+            logger.error("Failed to scan %s on %s: %s", net, interface, exc)
+            failed = True
+    if failed:
+        sys.exit(1)
 
 
 def iter_scan_targets(
