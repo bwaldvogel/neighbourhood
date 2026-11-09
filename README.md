@@ -1,6 +1,7 @@
 ## Layer 2 Network Neighbourhood Discovery Tool ##
 
 [![Checks](https://github.com/bwaldvogel/neighbourhood/actions/workflows/checks.yml/badge.svg)](https://github.com/bwaldvogel/neighbourhood/actions/workflows/checks.yml)
+[![PyPI](https://img.shields.io/pypi/v/neighbourhood)](https://pypi.org/project/neighbourhood/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](#dependencies)
 [![License: GPL v2](https://img.shields.io/badge/license-GPL_v2-blue)](LICENSE)
 
@@ -10,22 +11,27 @@ For additional information, see [this Stack Overflow question][3].
 ## Dependencies ##
 
 * Python 3.12+ (development uses Python 3.14)
-* [scapy][1] for networking functions like [arping][2]
+* [scapy][1] for networking functions like [arping][2] (installed automatically by uvx or pip)
 
 ## Installation and Usage ##
 
-When [scapy][1] is installed as system library, simply run:
+Run directly from PyPI with [uv][4]:
 
-```
-$ sudo ./neighbourhood.py [-i <interface>]
+```sh
+sudo uvx --from neighbourhood neighbourhood
 ```
 
-Alternatively, you can use [uv][4]:
+Alternatively, install into a virtual environment with pip:
 
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install neighbourhood
+sudo .venv/bin/neighbourhood
 ```
-$ uv sync
-$ sudo .venv/bin/python neighbourhood.py [-i <interface>]
-```
+
+Pass `--interface`, `--timeout`, or `--no-resolve` as needed. See
+`uvx neighbourhood --help` for all options. On Windows, install Npcap, then run
+`uvx neighbourhood` from an Administrator terminal (see below).
 
 Only directly connected IPv4 networks are scanned; routes through gateways are
 skipped. Each network is scanned once per interface. By default, Docker, bridge
@@ -42,11 +48,11 @@ Use `--timeout SECONDS` to set the ARP response timeout (default: 5 seconds) and
 `--no-resolve` to skip reverse-DNS hostname lookups:
 
 ```sh
-sudo .venv/bin/python neighbourhood.py -i eth0 --timeout 2 --no-resolve
+sudo uvx neighbourhood -i eth0 --timeout 2 --no-resolve
 ```
 
 The timeout applies to ARP responses, not DNS lookups or the total runtime.
-Run `uv run neighbourhood.py --help` to see all options without root privileges.
+Run `uvx neighbourhood --help` to see all options without root privileges.
 
 Failed scans are reported while remaining targets are still attempted; the program
 exits with status 1 if any scan fails.
@@ -54,11 +60,10 @@ exits with status 1 if any scan fails.
 ### Windows ###
 
 Install [Npcap](https://npcap.com/#download) for Scapy's packet capture and
-transmission support. In PowerShell, install dependencies with `uv sync`, then
-run the script from a PowerShell window opened as Administrator:
+transmission support. From a PowerShell window opened as Administrator, run:
 
 ```powershell
-uv run neighbourhood.py [-i <interface>]
+uvx neighbourhood
 ```
 
 The permission check supports Windows, but a complete ARP scan on Windows has

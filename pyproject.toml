@@ -1,12 +1,29 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "neighbourhood"
-version = "0.1.0"
-description = "Layer 2 network neighbourhood discovery tool that uses scapy "
+version = "1.0.0"
+description = "Discover hosts on directly connected IPv4 networks using ARP"
+authors = [{ name = "Benedikt Waldvogel", email = "mail@bwaldvogel.de" }]
+license = "GPL-2.0-only"
+license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "scapy>=2.8",
 ]
+
+[project.scripts]
+neighbourhood = "neighbourhood:cli"
+
+[project.urls]
+Repository = "https://github.com/bwaldvogel/neighbourhood"
+Issues = "https://github.com/bwaldvogel/neighbourhood/issues"
+
+[tool.setuptools]
+py-modules = ["neighbourhood"]
 
 [dependency-groups]
 dev = [

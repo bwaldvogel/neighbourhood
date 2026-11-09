@@ -6,3 +6,6 @@
 .venv/
 .ruff_cache/
 .pytest_cache/
+dist/
+build/
+*.egg-info/
